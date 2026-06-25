@@ -1,28 +1,28 @@
 import StyleDictionary from 'style-dictionary';
 import { register } from '@tokens-studio/sd-transforms';
 
-// Enregistrement des transforms
+// 1. Enregistrement des transforms Tokens Studio
 register(StyleDictionary, {
   excludeParentKeys: true
 });
 
+// 2. Enregistrement en bonne et due forme du format personnalisé pour le CSS
+StyleDictionary.registerFormat({
+  name: 'custom/css',
+  format: function({ dictionary }) {
+    const variables = dictionary.allTokens.map(token => {
+      const name = token.name || token.path.join('-');
+      return `  --${name}: ${token.value};`;
+    }).join('\n');
+    
+    return `:root {\n${variables}\n}`;
+  }
+});
+
+// 3. Initialisation et build
 const sd = new StyleDictionary({
   source: ['*.json', '!package.json', '!package-lock.json'],
   preprocessors: ['tokens-studio'],
-  
-  // 1. On crée un format personnalisé "custom/css" qui force l'écriture de TOUS les tokens
-  format: {
-    'custom/css': function({ dictionary }) {
-      const variables = dictionary.allTokens.map(token => {
-        // Sécurité si le nom n'est pas encore transformé en kebab-case
-        const name = token.name || token.path.join('-');
-        return `  --${name}: ${token.value};`;
-      }).join('\n');
-      
-      return `:root {\n${variables}\n}`;
-    }
-  },
-  
   platforms: {
     css: {
       transforms: [
@@ -35,7 +35,6 @@ const sd = new StyleDictionary({
       buildPath: 'src/styles/',
       files: [{
         destination: 'variables.css',
-        // 2. On utilise notre format personnalisé ici au lieu de 'css/variables'
         format: 'custom/css' 
       }]
     }
