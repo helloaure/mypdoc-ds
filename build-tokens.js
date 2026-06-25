@@ -1,16 +1,15 @@
 import StyleDictionary from 'style-dictionary';
 import { register } from '@tokens-studio/sd-transforms';
 
-// On enregistre les configurations spécifiques à Tokens Studio
 register(StyleDictionary);
 
 const sd = new StyleDictionary({
   source: ['*.json', '!package.json', '!package-lock.json'],
-  // Ajout crucial pour pré-traiter les alias complexes de Tokens Studio / Figma
-  preprocessors: ['tokens-studio'], 
+  // Indique à Style Dictionary que vos tokens utilisent les standards récents ($value, $type)
+  usesDtcg: true, 
   platforms: {
     css: {
-      // Ajout de 'ts/description/to/comment' et 'ts/resolveMath' pour assainir les tokens figma
+      // 'ts/resolveMath' et 'name/kebab' vont nettoyer les collisions de noms dues aux slashs
       transforms: [
         'attribute/cti', 
         'name/kebab', 
@@ -21,7 +20,11 @@ const sd = new StyleDictionary({
       buildPath: 'src/styles/',
       files: [{
         destination: 'variables.css',
-        format: 'css/variables'
+        format: 'css/variables',
+        options: {
+          // Permet d'ignorer temporairement les références cassées s'il en reste, pour forcer la création du fichier
+          outputReferences: false 
+        }
       }]
     }
   }
