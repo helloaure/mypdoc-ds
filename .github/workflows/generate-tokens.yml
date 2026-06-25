@@ -1,1 +1,32 @@
+name: Generation des Variables CSS
 
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**.json'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recuprer le code du depot
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Installer les dependances
+        run: npm install
+
+      - name: Executer Style Dictionary
+        run: node build-tokens.js
+
+      - name: Envoyer le CSS genere sur GitHub
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "style: mise a jour automatique des variables CSS"
+          file_pattern: 'src/styles/variables.css'
