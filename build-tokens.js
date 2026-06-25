@@ -6,7 +6,7 @@ import { register } from '@tokens-studio/sd-transforms';
 register(StyleDictionary);
 
 const sd = new StyleDictionary({
-  source: ['tokens/tokens.json'], 
+  source: ['tokens.json'], 
   platforms: {
     css: {
       transforms: ['attribute/cti', 'name/kebab', 'ts/color/css/hexrgba', 'ts/size/px'], 
