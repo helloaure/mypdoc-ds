@@ -7,6 +7,10 @@ on:
     paths:
       - '**.json'
 
+# Donne explicitement le droit de modifier les fichiers du dépôt
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
