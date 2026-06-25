@@ -1,6 +1,7 @@
 import StyleDictionary from 'style-dictionary';
 import { register } from '@tokens-studio/sd-transforms';
 
+// Enregistrement des transforms
 register(StyleDictionary, {
   excludeParentKeys: true
 });
@@ -8,6 +9,20 @@ register(StyleDictionary, {
 const sd = new StyleDictionary({
   source: ['*.json', '!package.json', '!package-lock.json'],
   preprocessors: ['tokens-studio'],
+  
+  // 1. On crée un format personnalisé "custom/css" qui force l'écriture de TOUS les tokens
+  format: {
+    'custom/css': function({ dictionary }) {
+      const variables = dictionary.allTokens.map(token => {
+        // Sécurité si le nom n'est pas encore transformé en kebab-case
+        const name = token.name || token.path.join('-');
+        return `  --${name}: ${token.value};`;
+      }).join('\n');
+      
+      return `:root {\n${variables}\n}`;
+    }
+  },
+  
   platforms: {
     css: {
       transforms: [
@@ -20,11 +35,8 @@ const sd = new StyleDictionary({
       buildPath: 'src/styles/',
       files: [{
         destination: 'variables.css',
-        // Utilisation du format étendu pour s'assurer que tous les tokens (même modifiés) soient inclus
-        format: 'css/variables',
-        options: {
-          outputReferences: false
-        }
+        // 2. On utilise notre format personnalisé ici au lieu de 'css/variables'
+        format: 'custom/css' 
       }]
     }
   }
