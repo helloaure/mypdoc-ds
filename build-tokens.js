@@ -2,14 +2,14 @@ import StyleDictionary from 'style-dictionary';
 import { register } from '@tokens-studio/sd-transforms';
 import fs from 'fs';
 
+// 1. On configure les transforms officiels de Tokens Studio (gestion du px, rem, etc.)
 register(StyleDictionary);
 
-// 1. Charger et nettoyer le JSON
+// 2. Charger et aplatir le JSON manuellement pour éviter le bug des dossiers Figma
 const rawData = fs.readFileSync('tokens.json', 'utf8');
 const figmaData = JSON.parse(rawData);
 
 let cleanTokens = {};
-
 for (const setKey in figmaData) {
   if (typeof figmaData[setKey] === 'object') {
     if (figmaData[setKey]['Mode 1']) {
@@ -20,36 +20,26 @@ for (const setKey in figmaData) {
   }
 }
 
-// 2. Formateur ultra-sécurisé pour récupérer la valeur (qu'elle soit dans value ou $value)
-StyleDictionary.registerFormat({
-  name: 'custom/css',
-  format: function({ dictionary }) {
-    const variables = dictionary.allTokens.map(token => {
-      // Sécurité absolue : on cherche la valeur là où elle peut se cacher
-      const value = token.value || token.$value || (token.original ? (token.original.value || token.original.$value) : undefined);
-      return `  --${token.name}: ${value};`;
-    }).join('\n');
-    
-    return `:root {\n${variables}\n}`;
-  }
-});
-
-// 3. Initialisation et build
+// 3. Configuration de Style Dictionary standard de niveau production
 const sd = new StyleDictionary({
   tokens: cleanTokens,
   platforms: {
     css: {
+      // Les transforms indispensables pour transformer vos chiffres Figma en vraies unités web (px)
       transforms: [
-        'attribute/cti', 
-        'name/kebab', 
-        'ts/resolveMath', 
-        'ts/color/css/hexrgba', 
-        'ts/size/px'
-      ], 
+        'attribute/cti',
+        'name/kebab',
+        'ts/resolveMath',
+        'ts/color/css/hexrgba',
+        'ts/size/px' // Ajoute automatiquement 'px' à vos spacings, font-sizes, borders, etc.
+      ],
       buildPath: 'src/styles/',
       files: [{
         destination: 'variables.css',
-        format: 'custom/css' 
+        format: 'css/variables', // Format standard officiel
+        options: {
+          outputReferences: true // Force l'écriture des alias sous forme de var(--...)
+        }
       }]
     }
   }
