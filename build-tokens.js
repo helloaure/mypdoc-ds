@@ -1,15 +1,17 @@
 import StyleDictionary from 'style-dictionary';
 import { register } from '@tokens-studio/sd-transforms';
 
-register(StyleDictionary);
+// CRUCIAL : On configure sd-transforms pour ignorer le dossier parent créé par Figma ("primitive color/Mode 1")
+register(StyleDictionary, {
+  excludeParentKeys: true
+});
 
 const sd = new StyleDictionary({
   source: ['*.json', '!package.json', '!package-lock.json'],
-  // Indique à Style Dictionary que vos tokens utilisent les standards récents ($value, $type)
-  usesDtcg: true, 
+  // On applique le préprocesseur dédié à Tokens Studio pour résoudre les alias nettoyés
+  preprocessors: ['tokens-studio'],
   platforms: {
     css: {
-      // 'ts/resolveMath' et 'name/kebab' vont nettoyer les collisions de noms dues aux slashs
       transforms: [
         'attribute/cti', 
         'name/kebab', 
@@ -20,11 +22,7 @@ const sd = new StyleDictionary({
       buildPath: 'src/styles/',
       files: [{
         destination: 'variables.css',
-        format: 'css/variables',
-        options: {
-          // Permet d'ignorer temporairement les références cassées s'il en reste, pour forcer la création du fichier
-          outputReferences: false 
-        }
+        format: 'css/variables'
       }]
     }
   }
