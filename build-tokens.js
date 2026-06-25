@@ -1,28 +1,44 @@
 import StyleDictionary from 'style-dictionary';
 import { register } from '@tokens-studio/sd-transforms';
+import fs from 'fs';
 
-// 1. Enregistrement des transforms Tokens Studio
-register(StyleDictionary, {
-  excludeParentKeys: true
-});
+register(StyleDictionary);
 
-// 2. Enregistrement en bonne et due forme du format personnalisé pour le CSS
+// 1. Charger et nettoyer le JSON manuellement à l'aide de Node.js
+// Remplacez 'tokens.json' par le nom exact de votre fichier JSON si nécessaire
+const rawData = fs.readFileSync('tokens.json', 'utf8');
+const figmaData = JSON.parse(rawData);
+
+let cleanTokens = {};
+
+// On parcourt le JSON pour extraire tout ce qui est confiné dans "primitive color/Mode 1" 
+// ou dans d'autres sets, et on remonte tout à la racine du JSON
+for (const setKey in figmaData) {
+  if (typeof figmaData[setKey] === 'object') {
+    // Si Tokens Studio a créé un sous-dossier "Mode 1"
+    if (figmaData[setKey]['Mode 1']) {
+      cleanTokens = { ...cleanTokens, ...figmaData[setKey]['Mode 1'] };
+    } else {
+      cleanTokens = { ...cleanTokens, ...figmaData[setKey] };
+    }
+  }
+}
+
+// 2. Enregistrer le format CSS ultra-robuste
 StyleDictionary.registerFormat({
   name: 'custom/css',
   format: function({ dictionary }) {
     const variables = dictionary.allTokens.map(token => {
-      const name = token.name || token.path.join('-');
-      return `  --${name}: ${token.value};`;
+      return `  --${token.name}: ${token.value};`;
     }).join('\n');
-    
     return `:root {\n${variables}\n}`;
   }
 });
 
-// 3. Initialisation et build
+// 3. Passer les tokens nettoyés directement à Style Dictionary (sans passer par l'option source)
 const sd = new StyleDictionary({
-  source: ['*.json', '!package.json', '!package-lock.json'],
-  preprocessors: ['tokens-studio'],
+  // Au lieu de lire le fichier, on lui injecte notre objet nettoyé en mémoire
+  tokens: cleanTokens, 
   platforms: {
     css: {
       transforms: [
