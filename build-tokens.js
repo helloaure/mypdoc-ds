@@ -1,9 +1,11 @@
+JavaScript
 import StyleDictionary from 'style-dictionary';
 import { register } from '@tokens-studio/sd-transforms';
 import fs from 'fs';
 
 register(StyleDictionary);
 
+// 1. Charger et aplatir le JSON Figma pour éviter les dossiers fantômes
 const rawData = fs.readFileSync('tokens.json', 'utf8');
 const figmaData = JSON.parse(rawData);
 
@@ -18,31 +20,34 @@ for (const setKey in figmaData) {
   }
 }
 
-// SÉCURITÉ INFAILLIBLE : On parcourt nos tokens, si c'est un nombre pur et que la clé 
-// contient "radius", "spacing", "size", "border" ou "icon", on lui ajoute 'px' manuellement.
-const addPxToNumbers = (obj) => {
-  for (const key in obj) {
-    if (typeof obj[key] === 'object' && obj[key] !== null) {
-      // Si c'est un nœud de token final (il a une clé value ou $value)
-      if (obj[key].value !== undefined || obj[key].$value !== undefined) {
-        let val = obj[key].value !== undefined ? obj[key].value : obj[key].$value;
-        
-        // Si la valeur est un nombre pur (ou une chaîne qui est un nombre pur)
-        if (!isNaN(val) && val !== '' && typeof val !== 'boolean') {
-          if (obj[key].value !== undefined) obj[key].value = `${val}px`;
-          if (obj[key].$value !== undefined) obj[key].$value = `${val}px`;
-        }
+// 2. On crée un format customisé ultra-intelligent
+// Il écrit les variables normalement, mais si la valeur finale est un chiffre pur, il ajoute 'px' !
+StyleDictionary.registerFormat({
+  name: 'custom/css-resolved',
+  format: function({ dictionary, options }) {
+    const variables = dictionary.allTokens.map(token => {
+      let value = token.value;
+      
+      // Si c'est un alias/référence (et qu'on veut garder les alias), on génère le var()
+      if (options.outputReferences && dictionary.usesReference(token.original.value || token.original.$value)) {
+        const refs = dictionary.getReferences(token.original.value || token.original.$value);
+        value = refs.map(ref => `var(--${ref.name})`).join(' ');
       } else {
-        // Sinon on continue de descendre dans l'arborescence
-        addPxToNumbers(obj[key]);
+        // Si c'est une valeur brute et que c'est un nombre pur (ex: 8, 16, 400)
+        // On exclut les épaisseurs de graisse de police (font-weight comme 400, 600, 700) et les opacités
+        if (!isNaN(value) && value !== '' && !token.name.includes('weight') && !token.name.includes('opacity')) {
+          value = `${value}px`;
+        }
       }
-    }
+      
+      return `  --${token.name}: ${value};`;
+    }).join('\n');
+    
+    return `:root {\n${variables}\n}`;
   }
-};
+});
 
-// On applique le correctif sur nos tokens nettoyés
-addPxToNumbers(cleanTokens);
-
+// 3. Initialisation de Style Dictionary
 const sd = new StyleDictionary({
   tokens: cleanTokens,
   platforms: {
@@ -56,9 +61,9 @@ const sd = new StyleDictionary({
       buildPath: 'src/styles/',
       files: [{
         destination: 'variables.css',
-        format: 'css/variables',
+        format: 'custom/css-resolved', // On utilise notre formateur intelligent
         options: {
-          outputReferences: true
+          outputReferences: true // Conserve les var(--mon-alias)
         }
       }]
     }
