@@ -31,8 +31,7 @@ const sd = new StyleDictionary({
         'name/kebab',
         'ts/resolveMath',
         'ts/color/css/hexrgba',
-        'ts/size/px', // Ajoute automatiquement 'px' à vos spacings, font-sizes, borders, etc.
-        'ts/borderRadius',
+        'ts/size/px' // Ajoute automatiquement 'px' à vos spacings, font-sizes, borders, etc
       ],
       buildPath: 'src/styles/',
       files: [{
