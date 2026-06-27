@@ -32,7 +32,7 @@ const sd = new StyleDictionary({
         'ts/resolveMath',
         'ts/color/css/hexrgba',
         'ts/size/px', // Ajoute automatiquement 'px' à vos spacings, font-sizes, borders, etc.
-        'ts/borderRadius'
+        'ts/borderRadius',
       ],
       buildPath: 'src/styles/',
       files: [{
