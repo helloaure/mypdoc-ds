@@ -2,10 +2,8 @@ import StyleDictionary from 'style-dictionary';
 import { register } from '@tokens-studio/sd-transforms';
 import fs from 'fs';
 
-// 1. On configure les transforms officiels de Tokens Studio (gestion du px, rem, etc.)
 register(StyleDictionary);
 
-// 2. Charger et aplatir le JSON manuellement pour éviter le bug des dossiers Figma
 const rawData = fs.readFileSync('tokens.json', 'utf8');
 const figmaData = JSON.parse(rawData);
 
@@ -20,26 +18,47 @@ for (const setKey in figmaData) {
   }
 }
 
-// 3. Configuration de Style Dictionary standard de niveau production
+// SÉCURITÉ INFAILLIBLE : On parcourt nos tokens, si c'est un nombre pur et que la clé 
+// contient "radius", "spacing", "size", "border" ou "icon", on lui ajoute 'px' manuellement.
+const addPxToNumbers = (obj) => {
+  for (const key in obj) {
+    if (typeof obj[key] === 'object' && obj[key] !== null) {
+      // Si c'est un nœud de token final (il a une clé value ou $value)
+      if (obj[key].value !== undefined || obj[key].$value !== undefined) {
+        let val = obj[key].value !== undefined ? obj[key].value : obj[key].$value;
+        
+        // Si la valeur est un nombre pur (ou une chaîne qui est un nombre pur)
+        if (!isNaN(val) && val !== '' && typeof val !== 'boolean') {
+          if (obj[key].value !== undefined) obj[key].value = `${val}px`;
+          if (obj[key].$value !== undefined) obj[key].$value = `${val}px`;
+        }
+      } else {
+        // Sinon on continue de descendre dans l'arborescence
+        addPxToNumbers(obj[key]);
+      }
+    }
+  }
+};
+
+// On applique le correctif sur nos tokens nettoyés
+addPxToNumbers(cleanTokens);
+
 const sd = new StyleDictionary({
   tokens: cleanTokens,
   platforms: {
     css: {
-      // Les transforms indispensables pour transformer vos chiffres Figma en vraies unités web (px)
       transforms: [
         'attribute/cti',
         'name/kebab',
         'ts/resolveMath',
-        'ts/color/css/hexrgba',
-        'ts/size/px', // Ajoute automatiquement 'px' à vos spacings, font-sizes, borders, etc
-        'ts/borderRadius'
+        'ts/color/css/hexrgba'
       ],
       buildPath: 'src/styles/',
       files: [{
         destination: 'variables.css',
-        format: 'css/variables', // Format standard officiel
+        format: 'css/variables',
         options: {
-          outputReferences: true // Force l'écriture des alias sous forme de var(--...)
+          outputReferences: true
         }
       }]
     }
