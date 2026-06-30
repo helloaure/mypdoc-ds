@@ -1,11 +1,11 @@
-JavaScript
 import StyleDictionary from 'style-dictionary';
 import { register } from '@tokens-studio/sd-transforms';
 import fs from 'fs';
 
+// 1. On configure les transforms officiels de Tokens Studio (gestion du px, rem, etc.)
 register(StyleDictionary);
 
-// 1. Charger et aplatir le JSON Figma pour éviter les dossiers fantômes
+// 2. Charger et aplatir le JSON manuellement pour éviter le bug des dossiers Figma
 const rawData = fs.readFileSync('tokens.json', 'utf8');
 const figmaData = JSON.parse(rawData);
 
@@ -20,50 +20,25 @@ for (const setKey in figmaData) {
   }
 }
 
-// 2. On crée un format customisé ultra-intelligent
-// Il écrit les variables normalement, mais si la valeur finale est un chiffre pur, il ajoute 'px' !
-StyleDictionary.registerFormat({
-  name: 'custom/css-resolved',
-  format: function({ dictionary, options }) {
-    const variables = dictionary.allTokens.map(token => {
-      let value = token.value;
-      
-      // Si c'est un alias/référence (et qu'on veut garder les alias), on génère le var()
-      if (options.outputReferences && dictionary.usesReference(token.original.value || token.original.$value)) {
-        const refs = dictionary.getReferences(token.original.value || token.original.$value);
-        value = refs.map(ref => `var(--${ref.name})`).join(' ');
-      } else {
-        // Si c'est une valeur brute et que c'est un nombre pur (ex: 8, 16, 400)
-        // On exclut les épaisseurs de graisse de police (font-weight comme 400, 600, 700) et les opacités
-        if (!isNaN(value) && value !== '' && !token.name.includes('weight') && !token.name.includes('opacity')) {
-          value = `${value}px`;
-        }
-      }
-      
-      return `  --${token.name}: ${value};`;
-    }).join('\n');
-    
-    return `:root {\n${variables}\n}`;
-  }
-});
-
-// 3. Initialisation de Style Dictionary
+// 3. Configuration de Style Dictionary standard de niveau production
 const sd = new StyleDictionary({
   tokens: cleanTokens,
   platforms: {
     css: {
+      // Les transforms indispensables pour transformer vos chiffres Figma en vraies unités web (px)
       transforms: [
         'attribute/cti',
         'name/kebab',
         'ts/resolveMath',
-        'ts/color/css/hexrgba'
+        'ts/color/css/hexrgba',
+        'ts/size/px' // Ajoute automatiquement 'px' à vos spacings, font-sizes, borders, etc.
       ],
       buildPath: 'src/styles/',
       files: [{
         destination: 'variables.css',
-        format: 'custom/css-resolved', // On utilise notre formateur intelligent
+        format: 'css/variables', // Format standard officiel
         options: {
-          outputReferences: true // Conserve les var(--mon-alias)
+          outputReferences: true // Force l'écriture des alias sous forme de var(--...)
         }
       }]
     }
